@@ -4,17 +4,19 @@ const User = require("../models/Users");
 const { query, validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const fetchUser = require('../middleware/fetchUser');
+
 
 const JWT_SECTET = "iloveshreemadbhagwatgeetaandupnishad@";
 
-//create a user using port at "/api/auth/createuser" : Not login required
+//ROUTE1 :create a user using port at "/api/auth/createuser" : Not login required
 router.post("/createuser", [
   query('name', "Enter a valid name").isLength({ min: 3, max: 20 }),
   query('email', "Enter a valid email").isEmail(),
   query('password', "password at least of 5 characters").isLength({ min: 5 }),
 ], async (req, res) => {
 
-  // if user is not with the valid data then sends error
+  // if user is not with the valid data then sends bad request and  error
   const result = validationResult(req.body);
   if (!result.isEmpty()) {
     return res.status(400).json({ error: error.array() });
@@ -28,7 +30,7 @@ router.post("/createuser", [
     }
 
     var salt = bcrypt.genSaltSync(10);
-    const hashPassword =  bcrypt.hashSync(req.body.password, salt);
+    const hashPassword = bcrypt.hashSync(req.body.password, salt);
 
     //creating the users
     user = await User.create({
@@ -39,18 +41,76 @@ router.post("/createuser", [
 
     const userId = {
       user: {
-        id : user.id
+        id: user.id
       }
     }
+    // creating the jwt token using the user id and secret code 
     const authToken = jwt.sign(userId, JWT_SECTET);
-    res.json({authToken})
+    res.json({ authToken })
 
   } catch (error) {
     console.error(error.message)
-    res.status(500).send("some error occured");
+    res.status(500).send("Internal server error");
   }
 })
 
+// ROUTE2 :Authenticate a user using port at "/api/auth/login" : Not login required
 
+router.post("/login", [
+  query('email', "Enter a valid email").isEmail(),
+  query('password', "Password cannot be black").exists()
+], async (req, res) => {
+  // if user is not with the valid data then sends bad request and  error
+  const result = validationResult(req.body);
+  if (!result.isEmpty()) {
+    return res.status(400).json({ error: error.array() });
+  }
+
+  //destructuring from the req.body
+  const { email, password } = req.body;
+
+  //find the user form date base 
+  try {
+    const user = await User.findOne({ email: email });
+    if (!user) {
+      return res.status(400).json({ error: "Login with correct credendials" });
+
+    }
+    bcrypt.compare(password, user.password, function (err, comparePassword) {
+      if (!comparePassword) {
+        return res.status(400).json({ error: "Login with correct credendials" });
+      }
+      const userId = {
+        user: {
+          id: user.id
+        }
+      }
+      // creating the jwt token using the user id and secret code 
+      const authToken = jwt.sign(userId, JWT_SECTET);
+      res.json({ authToken })
+
+    });
+
+
+  } catch (error) {
+    console.error(error.message)
+    res.status(500).send("Internal server error");
+  }
+})
+
+// ROUTE3 :get logged in a user using port at "/api/auth/getuser" :  Login required
+
+router.post("/getuser", fetchUser, async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const user = await User.findById(userId).select("-password");
+    res.send(user);
+    
+  } catch (error) {
+    console.error(error.message)
+    res.status(500).send("Internal server error");
+  }
+
+})
 
 module.exports = router

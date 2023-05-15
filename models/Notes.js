@@ -1,6 +1,11 @@
 const mongoose = require("mongoose");
 
 const notesSchema = new mongoose.Schema({
+    user : {
+        type : mongoose.Schema.Types.ObjectId, /// here you set the user ID from the user colection, so you can reference it 
+        ref : "user"
+    }, 
+
     title : {
         type : String,
         required : true
