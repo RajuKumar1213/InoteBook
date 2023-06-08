@@ -16,9 +16,9 @@ router.get("/fetchallnotes", fetchUser, async (req, res) => {
     }
 })
 
-//ROUTER : 2 add notes in to the database using the post: api/notes/createNotes : Login required
+//ROUTER : 2 add notes in to the database using the post: api/notes/addnote : Login required
 
-router.post("/createNotes", fetchUser, [
+router.post("/addnote", fetchUser, [
 
     query('title', "Enter a valid title").isLength({ min: 3 }),
     query('description', "Description must be at least five character ").isLength({ min: 5 })
